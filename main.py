@@ -1,6 +1,6 @@
 from selenium import webdriver
 from time import sleep
-from secrets import pw
+from secrets import password
 from bs4 import BeautifulSoup
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
@@ -127,19 +127,34 @@ class FileSystem:
         self.project_folder = project_folder
         self.dirpath = os.getcwd()
         self.followers_path = self.dirpath + "/" + \
+            self.project_folder + "/followers.csv"
+        self.following_path = self.dirpath + "/" + \
             self.project_folder + "/following.csv"
         self.posts_path = self.dirpath + "/" + self.project_folder + "/posts.csv"
-        self.df_followers = pd.read_csv(self.followers_path)
+        self.df_following = pd.read_csv(self.followers_path)
+        self.df_following = pd.read_csv(self.following_path)
         self.df_posts = pd.read_csv(self.posts_path)
 
+    def insert_followdata(self, following, followers, not_following_back):
+        for user in following:
+            if user not in self.df_following.username.unique():
+                self.insert_following(self, user, "#previousdata")
+        for user in followers:
+            if user not in self.df_followers.username.unique():
+                self.insert_followers(self, user, "#previousdata")
+
     def detect_follower(self, username):
-        return username in self.df_followers.username.unique()
+        return username in self.df_following.username.unique()
 
     def detect_likedpost(self, postid):
         return postid in self.df_posts.postid.unique()
 
     def prepare_stage2(self):
-        return self.df_followers[self.df_followers.stage == 1]["username"].unique()
+        """
+        Returns a list of all the followed people who are still in stage 1
+        i.e We only followed them but now we want to engage giving likes
+        """
+        return self.df_following[self.df_following.stage == 1]["username"].unique()
 
     def insert_likedpost(self, postid, username, hashtag):
         next_obs = self.df_posts.index.max() + 1
@@ -151,23 +166,32 @@ class FileSystem:
         print("\tInstagram post insertes in filesystem")
 
     def insert_following(self, username, hashtag):
-        next_obs = self.df_followers.index.max() + 1
-        self.df_followers.loc[next_obs, "username"] = username
-        self.df_followers.loc[next_obs, "stage"] = 1
-        self.df_followers.loc[next_obs, "hashtag"] = hashtag
-        self.df_followers.loc[next_obs, "date"] = date.today()
-        self.df_followers.to_csv(self.followers_path, index=False)
-        print("\tInstagram follower insertes in filesystem")
+        next_obs = self.df_following.index.max() + 1
+        self.df_following.loc[next_obs, "username"] = username
+        self.df_following.loc[next_obs, "stage"] = 1
+        self.df_following.loc[next_obs, "hashtag"] = hashtag
+        self.df_following.loc[next_obs, "date"] = date.today()
+        self.df_following.to_csv(self.followers_path, index=False)
+        print("\tInstagram following inserted in filesystem")
+
+    def insert_followers(self, username, hashtag):
+        next_obs = self.df_following.index.max() + 1
+        self.df_following.loc[next_obs, "username"] = username
+        self.df_following.loc[next_obs, "stage"] = 1
+        self.df_following.loc[next_obs, "hashtag"] = hashtag
+        self.df_following.loc[next_obs, "date"] = date.today()
+        self.df_following.to_csv(self.followers_path, index=False)
+        print("\tInstagram follower inserted in filesystem")
 
     def advance_stage(username):
-        current_stage = df_followers[df_followers.username ==
+        current_stage = df_following[df_following.username ==
                                      username, "stage"]
-        df_followers[df_followers.username ==
+        df_following[df_following.username ==
                      username, "stage"] = current_stage + 1
-        self.df_followers.to_csv(self.followers_path, index=False)
+        self.df_following.to_csv(self.followers_path, index=False)
         print("Stage updated: {}".format(username))
         if current_stage == 1:
-            df_followers[df_followers.username ==
+            df_following[df_following.username ==
                          username, "secondstage_date"] = date.today()
 
 
@@ -274,7 +298,7 @@ class InstaBot:
         postid = postid[:-1]
         return postid
 
-    def get_unfollowers(self):
+    def get_followersfollwing_data(self):
         self.driver.find_element_by_xpath("//a[contains(@href,'/{}')]".format(self.username))\
             .click()
         sleep_random(self.timewait)
@@ -286,9 +310,16 @@ class InstaBot:
             .click()
         sleep_random(self.timewait)
         followers = self._scroll_down()
+
         not_following_back = [
             user for user in following if user not in followers]
+        self.following = following
+        self.followers = followers
+        self.not_following_back = not_following_back
+
         print(not_following_back)
+
+        return following, followers, not_following_back
 
     def likeorfollow_click(self, xpath, neg_xpath, type):
         """ Most elements in instagram can be click but after they are clicked
@@ -353,9 +384,13 @@ class InstaBot:
 
 
 #----------------------BOT--------------------------
-my_bot = InstaBot('hoyxtimx', pw)
-filesystem = FileSystem(project_folder='testfilesystem')
-# my_bot.get_unfollowers()
+yourusername = "hoyxtimx"
+my_bot = InstaBot(yourusername, password)
+project_folder = "ProjectFolder"
+filesystem = FileSystem(project_folder='ProjectFolder')
+# Let us include all the people you been following
+following, followers, not_following_back = my_bot.get_followersfollwing_data()
+filesystem.insert_followdata(following, followers, not_following_back)
 
 hashtag = "arbol"
 my_bot.go_hashtag_url(hashtag)
@@ -373,6 +408,6 @@ for username in stage2_users:
     my_bot.go_user_url(username)
     allposts_user = '//*[@id="react-root"]/section/main/div/div[3]/article/div[1]/div'
     iterate_elements_onxpath(allposts_user, attribute,
-                             "div", filesystem, hashtag, time=2)
+                             "div", filesystem, hashtag, time=5)
     filesystem.advance_stage(username)
     raise ValueError()
