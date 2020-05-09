@@ -20,6 +20,23 @@ def sleep_random(time):
     sleep(time)
 
 
+def interate_test(xpath, attribute, iterative_elements):
+    """
+    """
+
+    xpath_element = my_bot.driver.find_element_by_xpath(xpath)
+    attribute_value = xpath_element.get_attribute(attribute)
+    print("attribute_value: {}".format(attribute_value))
+    # BS4
+    html_content = my_bot.driver.page_source
+    bsObj = BeautifulSoup(html_content)
+    galleries = bsObj.findAll(
+        iterative_elements, {attribute: re.compile(attribute_value)})
+    pdb.set_trace()
+    for gallery in galleries:
+        likeandfollow(gallery, my_bot, filesystem, hashtag, 10, 2)
+
+
 def iterate_elements_onxpath(xpath, attribute, iterative_elements, filesystem, hashtag, time=3):
     """
     # Since there is ot an easy way to iterate elements with selenium I'm using
@@ -261,6 +278,7 @@ class InstaBot:
         self._user_website = '//*[@id="react-root"]/section/main/div/header/section/div[2]/a'
         self._user_profilename = '//*[@id="react-root"]/section/main/div/header/section/div[2]/h1'
         self._user_bio = '//*[@id="react-root"]/section/main/div/header/section/div[2]/span'
+        self._following_square = "/html/body/div[4]/div/div[2]/ul/div"
 
     def get_userinfo():
         """
@@ -306,16 +324,17 @@ class InstaBot:
             .click()
         sleep_random(self.timewait)
         following = self._scroll_down()
-        self.driver.find_element_by_xpath("//a[contains(@href,'/followers')]")\
-            .click()
-        sleep_random(self.timewait)
-        followers = self._scroll_down()
 
         not_following_back = [
             user for user in following if user not in followers]
         self.following = following
         self.followers = followers
         self.not_following_back = not_following_back
+
+        self.driver.find_element_by_xpath("//a[contains(@href,'/followers')]")\
+            .click()
+        sleep_random(self.timewait)
+        followers = self._scroll_down()
 
         print(not_following_back)
 
@@ -358,14 +377,19 @@ class InstaBot:
 
     def _scroll_down(self):
         sleep_random(2)
-        sugs = self.driver.find_element_by_xpath(
-            '//a[contains(text(), Suggestions)]')
         # sugs = self.driver.find_element_by_xpath(
+        flag = True
+        while flag:
+            try:
+                sugs = interate_test(self._following_square, "class", "li")
+                self.driver.execute_script(
+                    'arguments[0].scrollIntoView()', sugs)
+            except Exception as e:
+                flag = False
         #    '//a[contains(text(), Suggestions)]')
-        sugs = self.driver.find_element_by_xpath(
-            '//a[.="See All Suggestions"]')
 
-        self.driver.execute_script('arguments[0].scrollIntoView()', sugs)
+        raise ValueError()
+
         sleep_random(2)
         scroll_box = self.driver.find_element_by_xpath(self._scrollbox_xpath)
         last_ht, ht = 0, 1
@@ -399,8 +423,8 @@ my_bot.go_hashtag_url(hashtag)
 allposts = '//*[@id="react-root"]/section/main/article/div[1]/div/div'
 # We identify posts using this attrtibute (beacuse it works)
 attribute = "style"
-# iterate_elements_onxpath(allposts, attribute,
-#                         "div", filesystem, hashtag, time=2)
+iterate_elements_onxpathe(allposts, attribute, "div",
+                          filesystem, hashtag, time=2)
 
 
 stage2_users = filesystem.prepare_stage2()
