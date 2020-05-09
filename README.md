@@ -19,7 +19,12 @@ After following them you will keep track of their profile to perform a marketing
 7. It will run automatically and send you alerts when someone complete fase 4.
 
 Objective: Get in touch with your real audience and avoid performig manual tasks until you create/obsreve more commitment with your content.
+
+
 ![INSTAGRAM-BOT: THE CHUNGUS](./images/bot.jpeg)
+
+
+
 
 ## Technologies
 Project is created with:
