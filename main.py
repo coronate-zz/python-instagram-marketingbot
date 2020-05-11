@@ -15,26 +15,13 @@ import random
 from datetime import date
 
 
-def sleep_random(time):
-    time = time * random.randint(0, 5) + random.random()
-    sleep(time)
-
-
-def interate_test(xpath, attribute, iterative_elements):
+def sleep_random(time, label="FALSE"):
+    """ Makes a print every tieme it sleeps, it adds some random behaviour to the sleep process
     """
-    """
-
-    xpath_element = my_bot.driver.find_element_by_xpath(xpath)
-    attribute_value = xpath_element.get_attribute(attribute)
-    print("attribute_value: {}".format(attribute_value))
-    # BS4
-    html_content = my_bot.driver.page_source
-    bsObj = BeautifulSoup(html_content)
-    galleries = bsObj.findAll(
-        iterative_elements, {attribute: re.compile(attribute_value)})
-    pdb.set_trace()
-    for gallery in galleries:
-        likeandfollow(gallery, my_bot, filesystem, hashtag, 10, 2)
+    print("\tIntitate sleep: {} in process: {} ".format(time, label))
+    for i in range(time):
+        print("\t\t {} Missipi".format(i))
+        sleep(1 + random.random())
 
 
 def iterate_elements_onxpath(xpath, attribute, iterative_elements, filesystem, hashtag, time=3):
@@ -48,10 +35,10 @@ def iterate_elements_onxpath(xpath, attribute, iterative_elements, filesystem, h
     attribute is passed to selenium.
     iterative_elements: HTML element type of the objects we want to iterate over
     """
-
+    print("*********** ITERATE ELEMENTS ON XPATH ***********")
     xpath_element = my_bot.driver.find_element_by_xpath(xpath)
     attribute_value = xpath_element.get_attribute(attribute)
-    print("attribute_value: {}".format(attribute_value))
+    #print("attribute_value: {}".format(attribute_value))
     # BS4
     html_content = my_bot.driver.page_source
     bsObj = BeautifulSoup(html_content)
@@ -70,11 +57,11 @@ def likeandfollow(gallery, my_bot, filesystem, hashtag, maxlikes=10, time=2):
         post_xpath = '//a[@href="' + post_href + '"]'
         # WebDriverWait(my_bot.driver, 10).until(
         #    expected_conditions.visibility_of_element_located((By.XPATH, post_xpath)))
-        sleep_random(time)
+        sleep_random(time, "likeandfollow 1")
         my_bot.driver.find_element_by_xpath(post_xpath).click()
-        sleep_random(time)
+        sleep_random(time,  "likeandfollow 2")
         postid = my_bot.get_postid()
-        sleep_random(time)
+        sleep_random(time,  "likeandfollow 3")
         username = my_bot.get_username()
         print(
             "username: {} - postid: {} - post_href: {} ".format(username, postid, post_href))
@@ -82,18 +69,18 @@ def likeandfollow(gallery, my_bot, filesystem, hashtag, maxlikes=10, time=2):
         if not filesystem.detect_follower(username):
             # User is NOT in
             filesystem.insert_following(username, hashtag)
-            sleep_random(time)
+            sleep_random(time,  "likeandfollow 4")
             my_bot.follow_click()
             print("User not in ... test".format())
 
         if not filesystem.detect_likedpost(postid):
             # Post NOT in
             filesystem.insert_likedpost(postid, username, hashtag)
-            sleep_random(time)
+            sleep_random(time,  "likeandfollow 5")
             if random.random() < .4:  # On average we will give 4 likes to each user
                 my_bot.like_click()
 
-        sleep_random(time)
+        sleep_random(time,  "likeandfollow FINAL")
         my_bot.close_post()
         # filesystem.validate_user(username)
 
@@ -105,8 +92,8 @@ def find_button_byword(html_content, word):
 
 def find_pattern(file_name, pattern, button_elements):
     """
-    This function looks for a pattern un a text file and then compare the values
-    of each match with the elements in the list button_elements.
+    This function looks for a pattern in a text file and then compare the values
+    of each match with the elements in the list "button_elements".
     The function returns a string with that match the pattern and also mathced
     values
 
@@ -141,6 +128,7 @@ class FileSystem:
     """
 
     def __init__(self, project_folder):
+        print("*********** CREATING FILESYTEM READING FILES ***********")
         self.project_folder = project_folder
         self.dirpath = os.getcwd()
         self.followers_path = self.dirpath + "/" + \
@@ -148,17 +136,19 @@ class FileSystem:
         self.following_path = self.dirpath + "/" + \
             self.project_folder + "/following.csv"
         self.posts_path = self.dirpath + "/" + self.project_folder + "/posts.csv"
-        self.df_following = pd.read_csv(self.followers_path)
+        self.df_followers = pd.read_csv(self.followers_path)
         self.df_following = pd.read_csv(self.following_path)
         self.df_posts = pd.read_csv(self.posts_path)
 
     def insert_followdata(self, following, followers, not_following_back):
+        print(
+            "*********** UPDATING FILESYSTEM WITH FOLLOWING AND FOLLOWERS LIST ***********")
         for user in following:
             if user not in self.df_following.username.unique():
-                self.insert_following(self, user, "#previousdata")
+                self.insert_following(user, "#previousdata")
         for user in followers:
             if user not in self.df_followers.username.unique():
-                self.insert_followers(self, user, "#previousdata")
+                self.insert_followers(user, "#previousdata")
 
     def detect_follower(self, username):
         return username in self.df_following.username.unique()
@@ -183,22 +173,28 @@ class FileSystem:
         print("\tInstagram post insertes in filesystem")
 
     def insert_following(self, username, hashtag):
-        next_obs = self.df_following.index.max() + 1
-        self.df_following.loc[next_obs, "username"] = username
-        self.df_following.loc[next_obs, "stage"] = 1
-        self.df_following.loc[next_obs, "hashtag"] = hashtag
-        self.df_following.loc[next_obs, "date"] = date.today()
-        self.df_following.to_csv(self.followers_path, index=False)
-        print("\tInstagram following inserted in filesystem")
+        if username not in self.df_following["username"].unique():
+            next_obs = self.df_following.index.max() + 1
+            self.df_following.loc[next_obs, "username"] = username
+            self.df_following.loc[next_obs, "stage"] = 1
+            self.df_following.loc[next_obs, "hashtag"] = hashtag
+            self.df_following.loc[next_obs, "date"] = date.today()
+            self.df_following.to_csv(self.following_path, index=False)
+            print("\tInstagram following inserted in filesystem")
+        else:
+            print("\tInstagram following already exist in filesystem")
 
     def insert_followers(self, username, hashtag):
-        next_obs = self.df_following.index.max() + 1
-        self.df_following.loc[next_obs, "username"] = username
-        self.df_following.loc[next_obs, "stage"] = 1
-        self.df_following.loc[next_obs, "hashtag"] = hashtag
-        self.df_following.loc[next_obs, "date"] = date.today()
-        self.df_following.to_csv(self.followers_path, index=False)
-        print("\tInstagram follower inserted in filesystem")
+        if username not in self.df_followers["username"].unique():
+            next_obs = self.df_followers.index.max() + 1
+            self.df_followers.loc[next_obs, "username"] = username
+            self.df_followers.loc[next_obs, "stage"] = 1
+            self.df_followers.loc[next_obs, "hashtag"] = hashtag
+            self.df_followers.loc[next_obs, "date"] = date.today()
+            self.df_following.to_csv(self.followers_path, index=False)
+            print("\tInstagram follower inserted in filesystem")
+        else:
+            print("\tInstagram follower already exist in filesystem")
 
     def advance_stage(username):
         current_stage = df_following[df_following.username ==
@@ -213,18 +209,19 @@ class FileSystem:
 
 
 class InstaBot:
-    def __init__(self, username, pw):
+    def __init__(self, username, pw, timewait):
+        print("*********** CREATING BOT OPENING DRIVER ***********")
         self.driver = webdriver.Chrome(
             "/home/alejandrocoronado/Dropbox/Github/ig-followers/Drivers/chromedriver_78")
-
+        self.timewait = timewait
         self.username = username
         self.driver.get("https://instagram.com")
-        sleep_random(2)
+        sleep_random(self.timewait, "InstaBot.__init__ 1")
 
-        sleep_random(2)
+        sleep_random(self.timewait, "InstaBot.__init__ 2")
         self.driver.find_element_by_xpath(
             "//input[@name=\"username\"]").send_keys(username)
-
+        sleep_random(self.timewait, "InstaBot.__init__ 3")
         self.driver.find_element_by_xpath(
             "//input[@name=\"password\"]").send_keys(pw)
 
@@ -251,7 +248,8 @@ class InstaBot:
 
         self.driver.find_element_by_xpath('//button[.="Log In"]')\
             .click()
-        sleep_random(4)
+        # <------LONG TIME
+        sleep_random(self.timewait + 3, "InstaBot.__init__ 3")
 
         self.driver.find_element_by_xpath('//button[.="Not Now"]')\
             .click()
@@ -261,7 +259,6 @@ class InstaBot:
         # sleep_random(2)
 
         # XPATHS:
-        self.timewait = 4
         self._dislike_xpath = "/html/body/div[4]/div[2]/div/article/div[2]/section[1]/span[1]/button"
         self._like = "/html/body/div[4]/div[2]/div/article/div[2]/section[1]/span[1]/button"
         self._follow_xpath = '/html/body/div[4]/div[2]/div/article/header/div[2]/div[1]/div[2]/button'
@@ -317,24 +314,25 @@ class InstaBot:
         return postid
 
     def get_followersfollwing_data(self):
+        print("*********** GET FOLLOWING AND FOLLOWERS DATA ***********")
         self.driver.find_element_by_xpath("//a[contains(@href,'/{}')]".format(self.username))\
             .click()
-        sleep_random(self.timewait)
+        sleep_random(self.timewait, "get_followersfollwing_data 1")
         self.driver.find_element_by_xpath("//a[contains(@href,'/following')]")\
             .click()
-        sleep_random(self.timewait)
-        following = self._scroll_down()
+        sleep_random(self.timewait, "get_followersfollwing_data 2")
+        following = self._scroll_down(self._scrollbox_xpath)
+
+        self.driver.find_element_by_xpath("//a[contains(@href,'/followers')]")\
+            .click()
+        sleep_random(self.timewait, "get_followersfollwing_data 3")
+        followers = self._scroll_down(self._scrollbox_xpath)
 
         not_following_back = [
             user for user in following if user not in followers]
         self.following = following
         self.followers = followers
         self.not_following_back = not_following_back
-
-        self.driver.find_element_by_xpath("//a[contains(@href,'/followers')]")\
-            .click()
-        sleep_random(self.timewait)
-        followers = self._scroll_down()
 
         print(not_following_back)
 
@@ -347,9 +345,9 @@ class InstaBot:
         try:
             my_bot.driver.find_element_by_xpath(xpath).click()
         except Exception as e:
-            print("Testing already " + type + " error handle.")
+            print("\tTesting already " + type + " error handle.")
             my_bot.driver.find_element_by_xpath(neg_xpath).click()
-            sleep_random(2)
+            sleep_random(self.timewait, "likeorfollow_click 1")
             my_bot.driver.find_element_by_xpath(xpath).click()
 
     def like_click(self):
@@ -375,43 +373,78 @@ class InstaBot:
         user_html_url = "https://www.instagram.com/" + username
         self.driver.get(user_html_url)
 
-    def _scroll_down(self):
-        sleep_random(2)
-        # sugs = self.driver.find_element_by_xpath(
+    def _scroll_down(self, scrollbox_xpath):
+        sleep_random(self.timewait, "_scroll_down 1")
+        # lastscrollelement = self.driver.find_element_by_xpath(
         flag = True
+        previoud_lastscrollelement = "Initial"
+
         while flag:
-            try:
-                sugs = interate_test(self._following_square, "class", "li")
-                self.driver.execute_script(
-                    'arguments[0].scrollIntoView()', sugs)
-            except Exception as e:
+            # Iterate while we can scrooll
+            lastscrollelement = self.get_last_user_scroll()
+            if previoud_lastscrollelement == lastscrollelement:
                 flag = False
-        #    '//a[contains(text(), Suggestions)]')
+            previoud_lastscrollelement = lastscrollelement
+            sleep(1)
 
-        raise ValueError()
-
-        sleep_random(2)
-        scroll_box = self.driver.find_element_by_xpath(self._scrollbox_xpath)
-        last_ht, ht = 0, 1
-        while last_ht != ht:
-            last_ht = ht
-            sleep_random(self.timewait)
-            ht = self.driver.execute_script("""
-                    arguments[0].scrollTo(0, arguments[0].scrollHeight);
-                    return arguments[0].scrollHeight;
-                    """, scroll_box)
+        scroll_box = self.driver.find_element_by_xpath(scrollbox_xpath)
         links = scroll_box.find_elements_by_tag_name('a')
         names = [name.text for name in links if name.text != '']
-        self.driver.find_element_by_xpath(self._closefollowersscrollbox_xpath)\
-            .click()
+        self.driver.find_element_by_xpath(
+            self._closefollowersscrollbox_xpath).click()
+
         return names
+
+    def get_last_user_scroll(self):
+        """
+        This function uses the content in a scrooll box to identiy the last element in it.
+        It  uses the scrollbox_xpath to identify the srcroll box and get the attribute
+        taht will be passed o BeautifulSoup to have a iterative element un unwarp all
+        the elements inside scrollbox_drive_element. The reason of this extrastep is that selenium
+        don't allow us to iterate, BeautifulSoup allow us to do it but it doesn't allow us
+        to use xpaths to cidnetify elements.
+        """
+
+        scrollbox_xpath = self._following_square  # Ellemnt that conatin all users
+        attribute = "class"
+        iterative_elements = "div"
+
+        scrollbox_drive_element = my_bot.driver.find_element_by_xpath(
+            scrollbox_xpath)
+        attribute_value = scrollbox_drive_element.get_attribute(attribute)
+        #print("\tattribute_value: {}".format(attribute_value))
+        # BS4
+        html_content = my_bot.driver.page_source
+        bsObj = BeautifulSoup(html_content)
+        bsObj_allelementsinscrollbox = bsObj.findAll(
+            iterative_elements, {attribute: re.compile(attribute_value)})[0]
+
+        # GET  LAST ELEMENT IN BS4
+        li_elements = bsObj_allelementsinscrollbox.findAll("li")
+        last_li_elemnt = li_elements[len(li_elements) - 1]
+        # There is a an extra branch in the li element- div
+        div_inside_last_element = last_li_elemnt.find_all("a")[0]
+        #idetifier_selenium = div_inside_last_element["aria-labelledby"]
+        idetifier_selenium = div_inside_last_element["href"]
+        #post_xpath = '//div[@aria-labelledby="' + idetifier_selenium + '"]'
+        post_xpath = '//a[@href="' + idetifier_selenium + '"]'
+
+        lastscrollelement = my_bot.driver.find_element_by_xpath(post_xpath)
+        self.driver.execute_script(
+            'arguments[0].scrollIntoView()', lastscrollelement)
+
+        return lastscrollelement
 
 
 #----------------------BOT--------------------------
 yourusername = "hoyxtimx"
-my_bot = InstaBot(yourusername, password)
+my_bot = InstaBot(yourusername, password, timewait=5)
 project_folder = "ProjectFolder"
+#----------------------FILESYSTEM--------------------------
 filesystem = FileSystem(project_folder='ProjectFolder')
+
+
+#----------------------PREVIOUS DATA --------------------------
 # Let us include all the people you been following
 following, followers, not_following_back = my_bot.get_followersfollwing_data()
 filesystem.insert_followdata(following, followers, not_following_back)
@@ -432,6 +465,6 @@ for username in stage2_users:
     my_bot.go_user_url(username)
     allposts_user = '//*[@id="react-root"]/section/main/div/div[3]/article/div[1]/div'
     iterate_elements_onxpath(allposts_user, attribute,
-                             "div", filesystem, hashtag, time=5)
+                             "div", filesystem, hashtag, time=3)
     filesystem.advance_stage(username)
     raise ValueError()
